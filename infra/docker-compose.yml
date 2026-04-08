@@ -7,39 +7,83 @@ services:
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
-      - "8080:8080" # Dashboard
+      - "8080:8080" # Traefik dashboard
     volumes:
       - /run/docker.sock:/var/run/docker.sock:ro
 
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
       POSTGRES_DB: govtech_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-pgvector.sql:/docker-entrypoint-initdb.d/init-pgvector.sql:ro
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U admin -d govtech_db" ]
+      test: ["CMD-SHELL", "pg_isready -U admin -d govtech_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-  # Service placeholders (will be built in subsequent steps)
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  bible-api:
+    build:
+      context: ../services/bible-api
+      dockerfile: Dockerfile
+    env_file:
+      - ../services/bible-api/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bible-api.rule=PathPrefix(`/api/bible`)"
+      - "traefik.http.routers.bible-api.entrypoints=web"
+      - "traefik.http.middlewares.bible-api-strip.stripprefix.prefixes=/api/bible"
+      - "traefik.http.routers.bible-api.middlewares=bible-api-strip"
+      - "traefik.http.services.bible-api.loadbalancer.server.port=5000"
+    restart: unless-stopped
+
+  bible-chat:
+    build:
+      context: ../apps/bible-chat
+      dockerfile: Dockerfile
+    env_file:
+      - ../apps/bible-chat/.env
+    ports:
+      - "3001:3001"
+    depends_on:
+      - bible-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bible-chat.rule=Host(`bible.localhost`)"
+      - "traefik.http.routers.bible-chat.entrypoints=web"
+      - "traefik.http.services.bible-chat.loadbalancer.server.port=3001"
+    restart: unless-stopped
+
   # auth-service:
   #   build: ../services/auth
   #   labels:
   #     - "traefik.http.routers.auth.rule=PathPrefix(`/api/auth`)"
-  #   depends_on: [db]
-
-  # marketing-app:
-  #   build: ../apps/marketing
-  #   labels:
-  #     - "traefik.http.routers.marketing.rule=PathPrefix(`/`)"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
 
 volumes:
   postgres_data:

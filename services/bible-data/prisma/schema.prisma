@@ -1,0 +1,143 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pg_trgm, unaccent]
+}
+
+model BibleVersion {
+  id           String   @id @default(uuid())
+  abbreviation String   @unique
+  fullName     String
+  language     String   @default("en")
+  year         Int?
+  copyright    String   @default("public_domain")
+  description  String?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  verses BibleVerse[]
+
+  @@map("bible_versions")
+}
+
+model BibleBook {
+  id           Int    @id
+  name         String
+  abbreviation String @unique
+  testament    String
+  order        Int    @unique
+  chapters     Int
+
+  verses BibleVerse[]
+
+  @@map("bible_books")
+}
+
+model BibleVerse {
+  id        String   @id @default(uuid())
+  versionId String
+  bookId    Int
+  chapter   Int
+  verse     Int
+  text      String
+  createdAt DateTime @default(now())
+
+  version    BibleVersion     @relation(fields: [versionId], references: [id])
+  book       BibleBook        @relation(fields: [bookId], references: [id])
+  embedding  BibleEmbedding?
+  fromRefs   VerseReference[] @relation("fromVerse")
+  toRefs     VerseReference[] @relation("toVerse")
+  topicVerse VerseTopic[]
+
+  @@unique([versionId, bookId, chapter, verse])
+  @@index([versionId])
+  @@index([bookId, chapter, verse])
+  @@map("bible_verses")
+}
+
+model BibleEmbedding {
+  id        String                       @id @default(uuid())
+  verseId   String                       @unique
+  embedding Unsupported("vector(1536)")?
+  createdAt DateTime                     @default(now())
+
+  verse BibleVerse @relation(fields: [verseId], references: [id])
+
+  @@map("bible_embeddings")
+}
+
+model VerseReference {
+  id          String @id @default(uuid())
+  fromVerseId String
+  toVerseId   String
+  type        String @default("cross_reference")
+
+  fromVerse BibleVerse @relation("fromVerse", fields: [fromVerseId], references: [id])
+  toVerse   BibleVerse @relation("toVerse", fields: [toVerseId], references: [id])
+
+  @@unique([fromVerseId, toVerseId])
+  @@map("verse_references")
+}
+
+model BibleTopic {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  verses VerseTopic[]
+
+  @@map("bible_topics")
+}
+
+model VerseTopic {
+  verseId String
+  topicId String
+
+  verse BibleVerse @relation(fields: [verseId], references: [id])
+  topic BibleTopic @relation(fields: [topicId], references: [id])
+
+  @@id([verseId, topicId])
+  @@map("verse_topics")
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  userId    String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  sessionId String
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model UserBookmark {
+  id        String   @id @default(uuid())
+  userId    String
+  verseId   String
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, verseId])
+  @@map("user_bookmarks")
+}

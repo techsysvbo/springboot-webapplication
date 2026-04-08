@@ -1,0 +1,27 @@
+{
+  "name": "bible-data",
+  "version": "1.0.0",
+  "description": "Bible data ingestion and embedding pipeline",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "seed": "ts-node src/seed.ts",
+    "embed": "ts-node src/embed.ts",
+    "migrate": "prisma migrate deploy",
+    "generate": "prisma generate"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "^6.0.0",
+    "openai": "^4.67.0",
+    "dotenv": "^16.4.5",
+    "axios": "^1.7.7",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prisma": "^6.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}
