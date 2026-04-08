@@ -7,6 +7,7 @@
     "build": "tsc",
     "seed": "ts-node src/seed.ts",
     "embed": "ts-node src/embed.ts",
+    "embed:dry-run": "ts-node src/embed.ts --dry-run",
     "migrate": "prisma migrate deploy",
     "generate": "prisma generate"
   },

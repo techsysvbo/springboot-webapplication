@@ -6,11 +6,7 @@ import { ChatMessage, ChatSession, ResponseFormat, Citation } from '@/lib/types'
 const STORAGE_KEY = 'bibleai-sessions';
 
 function generateId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for older environments (non-security-sensitive client-side ID)
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  return crypto.randomUUID();
 }
 
 function loadSessions(): ChatSession[] {

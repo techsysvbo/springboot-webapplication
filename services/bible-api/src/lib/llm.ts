@@ -50,18 +50,30 @@ async function* streamAnthropic(
   options: LLMOptions
 ): AsyncIterable<string> {
   // Dynamic import to avoid requiring the package when not used
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let Anthropic: any;
+  interface AnthropicSDK {
+    new (opts: { apiKey?: string }): {
+      messages: {
+        create: (opts: {
+          model: string;
+          max_tokens: number;
+          system?: string;
+          messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+          stream: true;
+        }) => Promise<AsyncIterable<{ type: string; delta?: { type: string; text?: string } }>>;
+      };
+    };
+  }
+  let AnthropicClass: AnthropicSDK | undefined;
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    Anthropic = require('@anthropic-ai/sdk').default;
+    AnthropicClass = (require('@anthropic-ai/sdk') as { default: AnthropicSDK }).default;
   } catch {
     console.error('Anthropic SDK not installed. Falling back to OpenAI.');
     yield* streamOpenAI(messages, options);
     return;
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const client = new AnthropicClass({ apiKey: process.env.ANTHROPIC_API_KEY });
   const model = options.model ?? process.env.ANTHROPIC_MODEL ?? 'claude-3-5-sonnet-20241022';
 
   const systemMsg = messages.find(m => m.role === 'system');
@@ -76,7 +88,7 @@ async function* streamAnthropic(
   });
 
   for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+    if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta' && event.delta.text) {
       yield event.delta.text;
     }
   }
