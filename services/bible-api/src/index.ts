@@ -18,7 +18,18 @@ const app = express();
 const PORT = parseInt(process.env.PORT ?? '5000', 10);
 
 app.use(helmet());
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? '*', credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    const allowedOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
+    // Allow requests with no origin (server-to-server, mobile apps) or matching origin
+    if (!origin || origin === allowedOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('combined'));
 

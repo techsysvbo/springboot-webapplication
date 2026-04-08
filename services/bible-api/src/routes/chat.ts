@@ -103,7 +103,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
         sessionId: sessionId!,
         role: 'assistant',
         content: fullAnswer,
-        metadata: JSON.parse(JSON.stringify({ citations, versions, format })),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        metadata: { citations, versions, format } as any,
       },
     });
 
