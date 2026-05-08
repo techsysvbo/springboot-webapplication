@@ -16,7 +16,7 @@
     "@prisma/client": "^6.0.0",
     "openai": "^4.67.0",
     "dotenv": "^16.4.5",
-    "axios": "^1.7.7",
+    "axios": "^1.15.2",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
